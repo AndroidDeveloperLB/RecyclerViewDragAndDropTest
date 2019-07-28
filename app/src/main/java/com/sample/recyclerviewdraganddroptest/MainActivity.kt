@@ -17,37 +17,85 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity() {
+    sealed class Item(val id: Long, val itemType: Int) {
+        class HeaderItem(id: Long) : Item(id, ITEM_TYPE_HEADER)
+        class NormalItem(id: Long, val data: Int) : Item(id, 1)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-        val items = ArrayList<Int>(100)
+        val items = ArrayList<Item>(100)
+        var itemDataCounter = 0
+        items.add(Item.HeaderItem(0L))
         for (i in 0 until 100)
-            items.add(i)
-        (recyclerView.layoutManager as GridLayoutManager).spanCount = 3
+            items.add(Item.NormalItem(itemDataCounter.toLong(), itemDataCounter++))
+        val gridLayoutManager = recyclerView.layoutManager as GridLayoutManager
+        gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int {
+                return when (recyclerView.adapter!!.getItemViewType(position)) {
+                    ITEM_TYPE_HEADER -> gridLayoutManager.spanCount
+                    ITEM_TYPE_NORMAL -> 1
+                    else -> throw Exception("unknown item type")
+                }
+            }
+        }
         recyclerView.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            init {
+                setHasStableIds(true)
+            }
+
+            override fun getItemViewType(position: Int): Int = items[position].itemType
+
+            override fun getItemId(position: Int): Long = items[position].id
+
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                return object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.grid_item, parent, false)) {}
+                val view = when (viewType) {
+                    ITEM_TYPE_HEADER -> LayoutInflater.from(parent.context).inflate(R.layout.header_item, parent, false)
+                    ITEM_TYPE_NORMAL -> LayoutInflater.from(parent.context).inflate(R.layout.grid_item, parent, false)
+                    else -> throw Exception("unknown item type")
+                }
+                return object : RecyclerView.ViewHolder(view) {}
             }
 
             override fun getItemCount() = items.size
 
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                holder.itemView.setBackgroundColor(if (position % 2 == 0) 0xffff0000.toInt() else 0xff00ff00.toInt())
-                holder.itemView.textView.text = "item $position"
+                when (getItemViewType(position)) {
+                    ITEM_TYPE_NORMAL -> {
+                        val data = (items[position] as Item.NormalItem).data
+                        holder.itemView.setBackgroundColor(if (data % 2 == 0) 0xffff0000.toInt() else 0xff00ff00.toInt())
+                        holder.itemView.textView.text = "item $data"
+                    }
+                    ITEM_TYPE_HEADER -> {
+                    }
+                    else -> throw Exception("unknown item type")
+                }
             }
         }
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
-            override fun isLongPressDragEnabled() = true
-            override fun isItemViewSwipeEnabled() = false
+            override fun isLongPressDragEnabled(): Boolean {
+                //                Log.d("AppLog", "isLongPressDragEnabled")
+                return true
+            }
+
+            override fun isItemViewSwipeEnabled(): Boolean {
+                //                Log.d("AppLog", "isItemViewSwipeEnabled")
+                return false
+            }
 
             override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                if (viewHolder.itemViewType == ITEM_TYPE_HEADER)
+                    return makeMovementFlags(0, 0)
+                //                Log.d("AppLog", "getMovementFlags")
                 val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
                 val swipeFlags = if (isItemViewSwipeEnabled) ItemTouchHelper.START or ItemTouchHelper.END else 0
                 return makeMovementFlags(dragFlags, swipeFlags)
             }
 
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                //                Log.d("AppLog", "onMove")
                 if (viewHolder.itemViewType != target.itemViewType)
                     return false
                 val fromPosition = viewHolder.adapterPosition
@@ -59,7 +107,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.adapterPosition
-                items.remove(position)
+                items.removeAt(position)
                 recyclerView.adapter!!.notifyItemRemoved(position)
             }
 
@@ -86,5 +134,10 @@ class MainActivity : AppCompatActivity() {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
         startActivity(intent)
         return true
+    }
+
+    companion object {
+        const val ITEM_TYPE_HEADER = 0
+        const val ITEM_TYPE_NORMAL = 1
     }
 }
