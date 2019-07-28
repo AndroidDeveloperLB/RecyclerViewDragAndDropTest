@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
         var itemDataCounter = 0L
         items.add(Item.HeaderItem(0L))
         for (i in 0 until 100) {
-            items.add(Item.NormalItem(itemDataCounter.toLong(), itemDataCounter))
+            items.add(Item.NormalItem(itemDataCounter, itemDataCounter))
             ++itemDataCounter
         }
         val gridLayoutManager = recyclerView.layoutManager as GridLayoutManager
