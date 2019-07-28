@@ -19,7 +19,7 @@ import kotlin.collections.ArrayList
 class MainActivity : AppCompatActivity() {
     sealed class Item(val id: Long, val itemType: Int) {
         class HeaderItem(id: Long) : Item(id, ITEM_TYPE_HEADER)
-        class NormalItem(id: Long, val data: Int) : Item(id, 1)
+        class NormalItem(id: Long, val data: Long) : Item(id, 1)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,10 +27,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
         val items = ArrayList<Item>(100)
-        var itemDataCounter = 0
+        var itemDataCounter = 0L
         items.add(Item.HeaderItem(0L))
-        for (i in 0 until 100)
-            items.add(Item.NormalItem(itemDataCounter.toLong(), itemDataCounter++))
+        for (i in 0 until 100) {
+            items.add(Item.NormalItem(itemDataCounter.toLong(), itemDataCounter))
+            ++itemDataCounter
+        }
         val gridLayoutManager = recyclerView.layoutManager as GridLayoutManager
         gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int): Int {
@@ -65,7 +67,7 @@ class MainActivity : AppCompatActivity() {
                 when (getItemViewType(position)) {
                     ITEM_TYPE_NORMAL -> {
                         val data = (items[position] as Item.NormalItem).data
-                        holder.itemView.setBackgroundColor(if (data % 2 == 0) 0xffff0000.toInt() else 0xff00ff00.toInt())
+                        holder.itemView.setBackgroundColor(if (data % 2L == 0L) 0xffff0000.toInt() else 0xff00ff00.toInt())
                         holder.itemView.textView.text = "item $data"
                     }
                     ITEM_TYPE_HEADER -> {
