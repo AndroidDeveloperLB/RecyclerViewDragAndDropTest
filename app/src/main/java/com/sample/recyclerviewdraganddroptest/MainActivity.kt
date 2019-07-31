@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.util.TypedValue
 import android.view.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -87,7 +88,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
-            val touchSlop = ViewConfiguration.get(this@MainActivity).scaledTouchSlop
+            val touchSlop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics)
+            //            val touchSlop = ViewConfiguration.get(this@MainActivity).scaledTouchSlop
             val longTouchTimeout = ViewConfiguration.getLongPressTimeout() * 2
             var touchState: ItemActionState = ItemActionState.IDLE
             var lastViewHolderPosHandled: Int? = null
@@ -161,6 +163,7 @@ class MainActivity : AppCompatActivity() {
                 //                recyclerView.adapter!!.notifyItemInserted(toPosition)
                 Collections.swap(items, fromPosition, toPosition)
                 recyclerView.adapter!!.notifyItemMoved(fromPosition, toPosition)
+                //                recyclerView.adapter!!.notifyDataSetChanged()
                 return true
             }
 
