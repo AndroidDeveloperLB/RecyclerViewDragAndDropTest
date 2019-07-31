@@ -103,8 +103,9 @@ class MainActivity : AppCompatActivity() {
 
             private fun onItemLongTouch(pos: Int) {
                 //                Log.d("AppLog", "longTouchTimeout:$longTouchTimeout")
+                val item = items[pos]
                 //                Toast.makeText(this@MainActivity, "long touch on :$pos ", Toast.LENGTH_SHORT).show()
-                AlertDialog.Builder(this@MainActivity).setTitle("long touch").setMessage("long tough on $pos").show()
+                AlertDialog.Builder(this@MainActivity).setTitle("long touch").setMessage("long touch on pos: $pos - item $item").show()
                 touchState = ItemActionState.HANDLED_LONG_TOUCH
                 lastViewHolderPosHandled = null
                 handler.removeCallbacks(longTouchRunnable)
