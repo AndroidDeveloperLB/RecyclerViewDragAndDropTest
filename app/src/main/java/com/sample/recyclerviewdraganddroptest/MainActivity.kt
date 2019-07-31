@@ -15,8 +15,6 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.grid_item.view.*
-import java.util.*
-import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity() {
     sealed class Item(val id: Long, val itemType: Int) {
@@ -158,14 +156,14 @@ class MainActivity : AppCompatActivity() {
                     return false
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
-                if (fromPosition < toPosition)
-                    for (i in fromPosition until toPosition)
-                        Collections.swap(items, i, i + 1)
-                 else
-                    for (i in fromPosition downTo toPosition + 1)
-                        Collections.swap(items, i, i - 1)
-                //                val item = items.removeAt(fromPosition)
-                //                items.add(toPosition, item)
+                //                if (fromPosition < toPosition)
+                //                    for (i in fromPosition until toPosition)
+                //                        Collections.swap(items, i, i + 1)
+                //                 else
+                //                    for (i in fromPosition downTo toPosition + 1)
+                //                        Collections.swap(items, i, i - 1)
+                val item = items.removeAt(fromPosition)
+                items.add(toPosition, item)
                 //                recyclerView.adapter!!.notifyItemRemoved(fromPosition)
                 //                recyclerView.adapter!!.notifyItemInserted(toPosition)
                 //                Collections.swap(items, fromPosition, toPosition)
