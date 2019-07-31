@@ -158,13 +158,19 @@ class MainActivity : AppCompatActivity() {
                     return false
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
+                if (fromPosition < toPosition)
+                    for (i in fromPosition until toPosition)
+                        Collections.swap(items, i, i + 1)
+                 else
+                    for (i in fromPosition downTo toPosition + 1)
+                        Collections.swap(items, i, i - 1)
                 //                val item = items.removeAt(fromPosition)
-                //                recyclerView.adapter!!.notifyItemRemoved(fromPosition)
                 //                items.add(toPosition, item)
+                //                recyclerView.adapter!!.notifyItemRemoved(fromPosition)
                 //                recyclerView.adapter!!.notifyItemInserted(toPosition)
-                Collections.swap(items, fromPosition, toPosition)
-                recyclerView.adapter!!.notifyItemMoved(fromPosition, toPosition)
+                //                Collections.swap(items, fromPosition, toPosition)
                 //                recyclerView.adapter!!.notifyDataSetChanged()
+                recyclerView.adapter!!.notifyItemMoved(fromPosition, toPosition)
                 return true
             }
 
