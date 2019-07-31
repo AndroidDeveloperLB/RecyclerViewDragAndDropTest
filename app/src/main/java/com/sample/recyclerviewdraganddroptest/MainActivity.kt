@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
         }
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
             val touchSlop = ViewConfiguration.get(this@MainActivity).scaledTouchSlop
-            val longTouchTimeout = ViewConfiguration.getLongPressTimeout()
+            val longTouchTimeout = ViewConfiguration.getLongPressTimeout() * 2
             var touchState: ItemActionState = ItemActionState.IDLE
             var lastViewHolderPosHandled: Int? = null
             val handler = Handler()
@@ -155,6 +155,10 @@ class MainActivity : AppCompatActivity() {
                     return false
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
+                //                val item = items.removeAt(fromPosition)
+                //                recyclerView.adapter!!.notifyItemRemoved(fromPosition)
+                //                items.add(toPosition, item)
+                //                recyclerView.adapter!!.notifyItemInserted(toPosition)
                 Collections.swap(items, fromPosition, toPosition)
                 recyclerView.adapter!!.notifyItemMoved(fromPosition, toPosition)
                 return true
