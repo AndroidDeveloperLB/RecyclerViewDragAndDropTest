@@ -1,12 +1,13 @@
 package com.sample.recyclerviewdraganddroptest
 
 import android.content.Intent
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuItem
-import android.view.ViewGroup
+import android.os.Handler
+import android.util.Log
+import android.view.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -20,6 +21,10 @@ class MainActivity : AppCompatActivity() {
     sealed class Item(val id: Long, val itemType: Int) {
         class HeaderItem(id: Long) : Item(id, ITEM_TYPE_HEADER)
         class NormalItem(id: Long, val data: Long) : Item(id, 1)
+    }
+
+    enum class ItemActionState {
+        IDLE, LONG_TOUCH_OR_SOMETHING_ELSE, DRAG, SWIPE, HANDLED_LONG_TOUCH
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +72,12 @@ class MainActivity : AppCompatActivity() {
                 when (getItemViewType(position)) {
                     ITEM_TYPE_NORMAL -> {
                         val data = (items[position] as Item.NormalItem).data
-                        holder.itemView.setBackgroundColor(if (data % 2L == 0L) 0xffff0000.toInt() else 0xff00ff00.toInt())
+                        holder.itemView.setBackgroundColor(when (data % 4L) {
+                            0L -> 0xffff0000.toInt()
+                            1L -> 0xffffff00.toInt()
+                            2L -> 0xff00ff00.toInt()
+                            else -> 0xff00ffff.toInt()
+                        })
                         holder.itemView.textView.text = "item $data"
                     }
                     ITEM_TYPE_HEADER -> {
@@ -77,15 +87,82 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
-            override fun isLongPressDragEnabled(): Boolean {
-                //                Log.d("AppLog", "isLongPressDragEnabled")
+            val touchSlop = ViewConfiguration.get(this@MainActivity).scaledTouchSlop
+            val longTouchTimeout = ViewConfiguration.getLongPressTimeout()
+            var touchState: ItemActionState = ItemActionState.IDLE
+            var lastViewHolderPosHandled: Int? = null
+            val handler = Handler()
+            val longTouchRunnable = Runnable {
+                if (lastViewHolderPosHandled != null && touchState == ItemActionState.LONG_TOUCH_OR_SOMETHING_ELSE) {
+                    //                    Log.d("AppLog", "timer timed out to trigger long touch")
+                    onItemLongTouch(lastViewHolderPosHandled!!)
+                }
+            }
+
+            private fun onItemLongTouch(pos: Int) {
+                //                Log.d("AppLog", "longTouchTimeout:$longTouchTimeout")
+                //                Toast.makeText(this@MainActivity, "long touch on :$pos ", Toast.LENGTH_SHORT).show()
+                AlertDialog.Builder(this@MainActivity).setTitle("long touch").setMessage("long tough on $pos").show()
+                touchState = ItemActionState.HANDLED_LONG_TOUCH
+                lastViewHolderPosHandled = null
+                handler.removeCallbacks(longTouchRunnable)
+            }
+
+            override fun onChildDrawOver(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder?, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
+                super.onChildDrawOver(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+                //                Log.d("AppLog", "onChildDrawOver $dX $dY pos:${viewHolder?.adapterPosition} actionState:$actionState isCurrentlyActive:$isCurrentlyActive")
+                if (touchState == ItemActionState.LONG_TOUCH_OR_SOMETHING_ELSE && (dX >= touchSlop || dY >= touchSlop)) {
+                    lastViewHolderPosHandled = null
+                    handler.removeCallbacks(longTouchRunnable)
+                    touchState = if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) ItemActionState.DRAG else ItemActionState.SWIPE
+                    Log.d("AppLog", "decided it's not a long touch, but $touchState instead")
+                }
+            }
+
+            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(viewHolder, actionState)
+                //                Log.d("AppLog", "onSelectedChanged adapterPosition: ${viewHolder?.adapterPosition} actionState:$actionState")
+                when (actionState) {
+                    ItemTouchHelper.ACTION_STATE_IDLE -> {
+                        //user finished drag or long touch
+                        if (touchState == ItemActionState.LONG_TOUCH_OR_SOMETHING_ELSE)
+                            onItemLongTouch(lastViewHolderPosHandled!!)
+                        touchState = ItemActionState.IDLE
+                        handler.removeCallbacks(longTouchRunnable)
+                        lastViewHolderPosHandled = null
+                    }
+                    ItemTouchHelper.ACTION_STATE_DRAG, ItemTouchHelper.ACTION_STATE_SWIPE -> {
+                        if (touchState == ItemActionState.IDLE) {
+                            lastViewHolderPosHandled = viewHolder!!.adapterPosition
+                            //                            Log.d("AppLog", "setting timer to trigger long touch")
+                            handler.removeCallbacks(longTouchRunnable)
+                            //started as long touch, but could also be dragging or swiping ...
+                            touchState = ItemActionState.LONG_TOUCH_OR_SOMETHING_ELSE
+                            handler.postDelayed(longTouchRunnable, longTouchTimeout.toLong())
+                        }
+                    }
+                }
+            }
+
+            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                //                Log.d("AppLog", "onMove")
+                if (touchState == ItemActionState.LONG_TOUCH_OR_SOMETHING_ELSE) {
+                    lastViewHolderPosHandled = null
+                    handler.removeCallbacks(longTouchRunnable)
+                    touchState = ItemActionState.DRAG
+                }
+                if (viewHolder.itemViewType != target.itemViewType)
+                    return false
+                val fromPosition = viewHolder.adapterPosition
+                val toPosition = target.adapterPosition
+                Collections.swap(items, fromPosition, toPosition)
+                recyclerView.adapter!!.notifyItemMoved(fromPosition, toPosition)
                 return true
             }
 
-            override fun isItemViewSwipeEnabled(): Boolean {
-                //                Log.d("AppLog", "isItemViewSwipeEnabled")
-                return false
-            }
+            override fun isLongPressDragEnabled(): Boolean = true
+
+            override fun isItemViewSwipeEnabled(): Boolean = false
 
             override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
                 if (viewHolder.itemViewType == ITEM_TYPE_HEADER)
@@ -96,23 +173,16 @@ class MainActivity : AppCompatActivity() {
                 return makeMovementFlags(dragFlags, swipeFlags)
             }
 
-            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                //                Log.d("AppLog", "onMove")
-                if (viewHolder.itemViewType != target.itemViewType)
-                    return false
-                val fromPosition = viewHolder.adapterPosition
-                val toPosition = target.adapterPosition
-                Collections.swap(items, fromPosition, toPosition)
-                recyclerView.adapter!!.notifyItemMoved(fromPosition, toPosition)
-                return true
-            }
-
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                if (touchState == ItemActionState.LONG_TOUCH_OR_SOMETHING_ELSE) {
+                    lastViewHolderPosHandled = null
+                    handler.removeCallbacks(longTouchRunnable)
+                    touchState = ItemActionState.DRAG
+                }
                 val position = viewHolder.adapterPosition
                 items.removeAt(position)
                 recyclerView.adapter!!.notifyItemRemoved(position)
             }
-
         })
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
@@ -132,6 +202,7 @@ class MainActivity : AppCompatActivity() {
         if (url == null)
             return true
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        @Suppress("DEPRECATION")
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
         startActivity(intent)
