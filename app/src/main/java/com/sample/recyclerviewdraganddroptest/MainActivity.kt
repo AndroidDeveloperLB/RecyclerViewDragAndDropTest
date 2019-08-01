@@ -17,6 +17,8 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.grid_item.view.*
 
 class MainActivity : AppCompatActivity() {
+    lateinit var itemTouchHelper: ItemTouchHelper
+
     sealed class Item(val id: Long, val itemType: Int) {
         class HeaderItem(id: Long) : Item(id, ITEM_TYPE_HEADER)
         class NormalItem(id: Long, val data: Long) : Item(id, 1)
@@ -85,7 +87,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
+        itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
             val touchSlop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics)
             //            val touchSlop = ViewConfiguration.get(this@MainActivity).scaledTouchSlop
             val longTouchTimeout = ViewConfiguration.getLongPressTimeout() * 2
